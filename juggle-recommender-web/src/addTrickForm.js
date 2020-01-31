@@ -11,6 +11,7 @@ import downArrow from './images/down-arrow.svg'
 import SmallTrickList from './smallTrickList'
 import MessageQueue from './messageQueue'
 import messageStore from "./stores/messageStore"
+import YouTube from 'react-youtube';
 
 @observer
 class AddTrickForm extends Component {
@@ -23,6 +24,9 @@ class AddTrickForm extends Component {
 		video : "",
 		videoStartTime: "",
 		videoEndTime: "",
+		showPreview: false,
+		previewId: "",
+		videoPlayer: null,
 		siteswap : "",
 		contributor: null,
 		gifUrl: null,
@@ -214,6 +218,7 @@ class AddTrickForm extends Component {
 		this.setState({
 			video:e.target.value
 		},this.checkIfFormIsSubmittable)
+		this.updatePreview();
 	}
 	handleSSChange=(e)=>{
 		this.setState({
@@ -238,12 +243,97 @@ class AddTrickForm extends Component {
 
 		this.checkIfFormIsSubmittable()
 	}
+	getVideoId=(userProvidedURL)=>{
+		let usefulPart = ""
+		if(userProvidedURL.includes("youtu")){
+			if (userProvidedURL.includes("youtube.com/watch")){
+				usefulPart = userProvidedURL.split('youtube.com/watch?v=')
+				usefulPart = usefulPart[usefulPart.length-1]
+				if (usefulPart.includes("&feature=youtu.be")){
+				usefulPart = usefulPart.replace("&feature=youtu.be","")
+				}
+				//https://www.youtube.com/watch?v=Kr8LhLGjyiY            
+			}else if (userProvidedURL.includes("youtu.be/")){
+				//https://youtu.be/Kr8LhLGjyiY
+				usefulPart = userProvidedURL.split('youtu.be/')
+				usefulPart = usefulPart[usefulPart.length-1]            
+			}
+		}
+		return usefulPart
+	}
+	/*
+	youtubeStateChange = (data) => {
+		const video = this.video.internalPlayer
+		video.getCurrentTime().then((time)=>{
+			let start = parseInt(this.state.videoStartTime)
+			let end = parseInt(this.state.videoEndTime)
+			if (time < start || time > end){
+				video.seekTo(this.state.videoStartTime)
+				video.playVideo()
+				video.seek
+			}
+		})
+	}
+	*/
+	onYoutubePlayerReady=(e)=>{
+		this.setState({
+			videoPlayer: player
+		})
+		/*
+		var startTime = document.getElementById('startTimeInput')
+		startTime.addEventListener('blur', (event) => {
+			event.preventDefault()
+			this.handleTimeBlur(player)
+		})
+
+		var startTime = document.getElementById('startTimeInput')
+		startTime.addEventListener('blur', (event) => {
+			event.preventDefault()
+			this.handleTimeBlur(player)
+		})
+		*/
+	}
+
+
+
+	updatePreview=()=>{
+		if (this.state.video != null) {
+			if (this.state.video.includes("youtu")) {
+				let videoId = this.getVideoId(this.state.video);
+				if (videoId != "") {
+					this.setState({
+						showPreview: true,
+						previewId: videoId
+					});
+				}
+			}
+		}
+	}
+
+	handleTimeBlur=(e)=>{
+		console.log('time blur')
+		let setStart = false
+		let setEnd = false
+		if (this.state.videoStartTime != "" || this.state.videoEndTime != "") {
+			setStart = (this.state.videoStartTime == parseInt(this.state.videoStartTime, 10))
+			setEnd = (this.state.videoEndTime == parseInt(this.state.videoEndTime, 10))
+			console.log(setStart, setEnd)
+			if (setStart && setEnd) {
+				this.state.videoPlayer.loadVideoById({
+					videoId: this.state.videoId,
+					startSeconds: this.state.videoStartTime,
+					endSeconds: this.state.videoEndTime
+				})
+			}
+		}
+	}
+
 	handleStartTimeChange=(e)=>{
 		this.setState({
 			videoStartTime:e.target.value
 		},this.checkIfFormIsSubmittable)
 	}
-	handleEndTimeChange=(e)=>{		
+	handleEndTimeChange=(e)=>{
 		this.setState({
 			videoEndTime:e.target.value
 		},this.checkIfFormIsSubmittable)
@@ -778,6 +868,15 @@ class AddTrickForm extends Component {
 										/>
 									</div>
 
+		const youtubeOpts = {
+			playerVars: { // https://developers.google.com/youtube/player_parameters
+			autoplay: 0,
+			mute : true,
+			loop : 1,
+			playsinline : 1
+			}
+		}
+
 		const form = 	
 					<div className="form">
 						{backButton}
@@ -807,6 +906,22 @@ class AddTrickForm extends Component {
 								</div>:null
 							}
 							<div className="videoInputContainer">
+							{this.state.showPreview?
+									<YouTube
+									id="YouTubeVideo"
+									name="vidFrame" 
+									title="YouTubeVid"
+									videoId={this.state.previewId}
+									className= "youTubeDemo"
+									opts={youtubeOpts}      
+									muted={true}                          
+									allow="autoplay"  
+									allowtransparency="true"
+									src={this.state.video}
+									//onStateChange={this.youtubeStateChange}
+									onReady={this.onYoutubePlayerReady}
+									ref={(video)=> {this.video = video}}  
+								  ></YouTube>:null}
 								{this.state.gifUrl ? null: <span className="redText">*</span>}
 								<span className="inputLabel">Instagram or Youtube Video</span>
 								<span className="warning">{this.state.videoErrorMessage? this.state.videoErrorMessage:"\u00A0"}</span>
@@ -831,17 +946,17 @@ class AddTrickForm extends Component {
 											id="startTimeInput"
 											placeholder="mm:ss"
 											value={this.state.videoStartTime} 
-											onBlur={this.handleStartTimeChange}
+											onBlur={this.handleTimeBlur}
 											onChange={this.handleStartTimeChange}
 									/>															
 									<input className="timeInput"
+											id="endTimeInput"
 											placeholder="mm:ss"
 											value={this.state.videoEndTime} 
-											onBlur={this.handleEndTimeChange}
+											onBlur={this.handleTimeBlur}
 											onChange={this.handleEndTimeChange}
 									/><br/><br/><br/>								
-								</div>:null
-							}
+								</div>:null}
 							<div className="smallInputsDiv">
 								<div className="inputContainer1">
 									<span className="redText">*</span>
